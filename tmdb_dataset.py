@@ -1,4 +1,4 @@
-
+#Import all Libraries
 import numpy as np
 import pandas as pd
 pd.set_option('max_columns',None)
@@ -22,18 +22,19 @@ import plotly.offline as py
 import plotly.graph_objs as go
 import plotly.tools as tls
 
+#Load the Dataset
 train = pd.read_csv(r'C:\Users\Pranay\TMDB\train.csv')
 test = pd.read_csv(r'C:\Users\Pranay\TMDB\test.csv')
 
-#Visualizizng Target Distribution
+#Visualizizng Target Distribution (Revenue)
 fig,ax = plt.subplots(figsize = (16,6))
 plt.subplot(1,2,1)
 sns.distplot(train['revenue'],kde=False);
 plt.title("Distribution of Revenue")
 plt.subplot(1,2,2)
-sns.distplot(np.log1p(train['revenue']),kde=False);
+sns.distplot(np.log1p(train['revenue']),kde=False) #Histogram
 plt.title("Distribution of log-transformed Revenue")
-train['log_revenue'] = np.log1p(train['revenue'])
+train['log_revenue'] = np.log1p(train['revenue']) #Create a new column by log-tranforming revenue column.
 
 #Relationship between Film Revenue and Budget
 fig,ax = plt.subplots(figsize = (16,6))
@@ -41,25 +42,24 @@ plt.subplot(1,2,1)
 sns.scatterplot(x=train['budget'],y=train['revenue']);
 plt.title("Revenue vs Budget")
 plt.subplot(1,2,2)
-sns.scatterplot(x=np.log1p(train['budget']),y=train['log_revenue']);
+sns.scatterplot(x=np.log1p(train['budget']),y=train['log_revenue']) #ScatterPlot
 plt.title("Log_Revenue vs Log_Budget")
-train['log_budeget'] = np.log1p(train['budget'])
-test['log_budget'] = np.log1p(train['budget'])
+train['log_budeget'] = np.log1p(train['budget']) #Create a new column by log-tranforming budget column in train set.
+test['log_budget'] = np.log1p(train['budget']) #Create a new column by log-tranforming budget column in test set.
 
 #Does Homepage Affect Revenue
 train['has_homepage'] = 0
 train.loc[train['homepage'].isnull() == False,'has_homepage'] = 1
 test['has_homepage'] = 0
 test.loc[test['homepage'].isnull() == False,'has_homepage'] = 1
-sns.catplot(x ='has_homepage',y ='revenue',data = train);
+sns.catplot(x ='has_homepage',y ='revenue',data = train) #Categorical Plot
 plt.title("Revenue for films with and without homepage")
-
 
 #Distribution of languages in Film
 language_data = train.loc[train['original_language'].isin(train['original_language'].value_counts().head(10).index)]
 fig,ax = plt.subplots(figsize=(16,6))
 plt.subplot(1,2,1)
-sns.boxplot(x='original_language',y='revenue',data=language_data);
+sns.boxplot(x='original_language',y='revenue',data=language_data); #BoxPlot
 plt.title("Mean revenue per Language")
 plt.subplot(1,2,2)
 sns.boxplot(x='original_language',y='log_revenue',data=language_data);
@@ -67,10 +67,9 @@ plt.title("Mean Log_Revenue per Language")
 plt.show()
 
 #Frequent Words in Films Titles and Descriptions
-
 plt.figure(figsize = (12,12))
 text = ' '.join(train['original_title'].values)
-wordcloud = WordCloud(max_font_size = None,background_color='white',width=1200,height=1000).generate(text)
+wordcloud = WordCloud(max_font_size = None,background_color='white',width=1200,height=1000).generate(text) #Genreate a Word Cloud
 plt.imshow(wordcloud);
 plt.title("Top Words Across Movie Titles")
 plt.axis('off')
@@ -78,13 +77,14 @@ plt.show()
 
 plt.figure(figsize = (10,10))
 text = ' '.join(train['overview'].fillna('').values)
-wordcloud = WordCloud(max_font_size = None,background_color='white',width=1200,height=1000).generate(text)
+wordcloud = WordCloud(max_font_size = None,background_color='white',width=1200,height=1000).generate(text) #Genreate a Word Cloud
 plt.imshow(wordcloud);
 plt.title("Top Words Across Movie Overviews")
 plt.axis('off')
 plt.show()
 
-vectorizer = TfidfVectorizer(
+#Film Description Impacting Revenue
+vectorizer = TfidfVectorizer(      #Using a TfidVectorizer for Text Analysis(Bag of Words Representation)
     sublinear_tf = True,
     analyzer = 'word',
     token_pattern = r'\w{1,}',
@@ -92,7 +92,7 @@ vectorizer = TfidfVectorizer(
     min_df = 5
 )
 overview_text = vectorizer.fit_transform(train['overview'].fillna(''))
-linreg = LinearRegression()
+linreg = LinearRegression()  #Using a Linear Regression Model
 linreg.fit(overview_text,train['log_revenue'])
 eli5.show_weights(linreg,vec = vectorizer,top=20,feature_filter = lambda x:x!='<BIAS>')
 
@@ -107,14 +107,13 @@ def fix_date(x):
     return x[:-2] + '19'+year
 
 test.loc[test['release_date'].isnull()==True]
+test.loc[test['original_title'] == 'Jails, Hospitals & Hip-Hop','release_date'] = '05/01/00' #The year for this movie was missing
 
-test.loc[test['original_title'] == 'Jails, Hospitals & Hip-Hop','release_date'] = '05/01/00'
-
-train['release_date'] = train['release_date'].apply(lambda x: fix_date(x))
+train['release_date'] = train['release_date'].apply(lambda x: fix_date(x)) #Applyng fix_date() on every value of release_date column
 test['release_date'] = test['release_date'].apply(lambda x: fix_date(x))
 
 #Creating features based on release date
-train['release_date'] = pd.to_datetime(train['release_date'])
+train['release_date'] = pd.to_datetime(train['release_date']) #Converting to pandas datetime function
 test['release_date'] = pd.to_datetime(test['release_date'])
 
 def process(df):
@@ -123,11 +122,11 @@ def process(df):
     part_col = 'release_date'+'_'+part
     df[part_col] = getattr(df['release_date'].dt,part).astype(int)
   return df
-train = process(train)
+train = process(train) #Adding columns release_date_year,release_date_weekday,release_date_month,release_date_weekofyear,release_date_day,release_date_quarter in the dataset
 test = process(test)
 
 #Using Plotly to Visualize the Number of films Per Year
-d1 = train['release_date_year'].value_counts().sort_index()
+d1 = train['release_date_year'].value_counts().sort_index() #Extracting the counts of film sorted by year
 d2 = test['release_date_year'].value_counts().sort_index()
 
 data1 = [go.Scatter(x=d1.index,y=d1.values,name='Train'),go.Scatter(x=d2.index,y=d2.values,name='Test')]
@@ -137,7 +136,7 @@ py.plot(dict(data=data1,layout=layout1))
 
 #Number of films and total Revenue per year
 d3 = train['release_date_year'].value_counts().sort_index()
-d4 = train.groupby(train['release_date_year'])['revenue'].sum()
+d4 = train.groupby(train['release_date_year'])['revenue'].sum() #Caculating the sum of revenue by year
 
 data2 = [go.Scatter(x=d3.index,y=d3.values,name='Film Count'),go.Scatter(x=d4.index,y=d4.values,name='Total Revenue',yaxis='y2')]
 layout2 = go.Layout(dict(title='Number of films and Total Revenue per year',xaxis=dict(title='Year'),yaxis=dict(title='Count of films'),
@@ -146,7 +145,7 @@ py.plot(dict(data=data2,layout=layout2))
 
 #Number of films and Mean Revenue per year
 d5 = train['release_date_year'].value_counts().sort_index()
-d6 = train.groupby(train['release_date_year'])['revenue'].mean()
+d6 = train.groupby(train['release_date_year'])['revenue'].mean() #Calculating mean of revenue by year
 
 data3 = [go.Scatter(x=d5.index,y=d5.values,name='Film Count'),go.Scatter(x=d6.index,y=d6.values,name='T Revenue',yaxis='y2')]
 layout3 = go.Layout(dict(title='Number of films and Mean Revenue per year',xaxis=dict(title='Year'),yaxis=dict(title='Count of films'),
@@ -154,15 +153,15 @@ layout3 = go.Layout(dict(title='Number of films and Mean Revenue per year',xaxis
 py.plot(dict(data=data3,layout=layout3))
 
 #Do Release days impact revenue
-sns.catplot(x='release_date_weekday',y='revenue',data = train)
+sns.catplot(x='release_date_weekday',y='revenue',data = train) #CategoricalPlot
 plt.title("Revenue on different days of week")
 plt.show()
 
 #Relationship between Runtime and Revenue
-sns.distplot(train['runtime'].fillna(0) / 60,bins=40,kde = False)
+sns.distplot(train['runtime'].fillna(0) / 60,bins=40,kde = False) #Histogram
 plt.title("Distribution of length of films in hours")
 plt.show()
 
-sns.scatterplot(x=train['runtime'].fillna(0)/60,y = train['revenue'])
+sns.scatterplot(x=train['runtime'].fillna(0)/60,y = train['revenue']) #Scatterplot
 plt.title("Runtime vs Revenue")
 plt.show()
