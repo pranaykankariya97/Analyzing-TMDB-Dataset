@@ -52,6 +52,6 @@ This project uses the following software and libraries:
 * [Natural Language Toolkit](https://www.nltk.org/)
 
 ## Contact
-Email: pranaykankariya97@gmail.com
+Email: pranaykankariya97@gmail.com \
 Project Link: [https://github.com/pranaykankariya97/Analyzing-TMDB-Dataset](https://github.com/pranaykankariya97/Analyzing-TMDB-Dataset)
 
